@@ -32,7 +32,8 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
     TRY_ON("Try On", Icons.Default.Checkroom),
     CATALOGUE("Catalogue", Icons.Default.Storefront),
     FAVORITES("Favorites", Icons.Default.Favorite),
-    COMPARE("Compare", Icons.Default.Compare)
+    COMPARE("Compare", Icons.Default.Compare),
+    STAFF("Staff", Icons.Default.Badge)
 }
 
 class MainActivity : ComponentActivity() {
@@ -263,7 +264,54 @@ private fun TryOnApp() {
                     })
                     AppTab.FAVORITES -> FavoritesScreen(savedLooks, onDelete = { CustomerSessionStore.removeLook(it) })
                     AppTab.COMPARE -> CompareScreen(savedLooks)
+                    AppTab.STAFF -> StaffModeScreen(onScan = { bitmap ->
+                        scope.launch {
+                            status = "Scanning product barcode..."
+                            val code = runCatching { BarcodeRepository.scan(bitmap) }.getOrNull()
+                            val product = code?.let { StaffMode.findProduct(it) }
+                            status = if (product != null) "Found ${product.name} (${product.code})" else "Barcode not found in this catalogue."
+                            if (product != null) {
+                                tab = AppTab.TRY_ON
+                                runCatching { CatalogueRepository.loadProductImage(product) }.fold(
+                                    { image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Staff scan: ${product.name}" },
+                                    { status = "Could not load scanned product." }
+                                )
+                            }
+                        }
+                    })
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StaffModeScreen(onScan: (Bitmap) -> Unit) {
+    val takeScan = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
+        if (bitmap != null) onScan(bitmap)
+    }
+    Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Staff Mode", style = MaterialTheme.typography.headlineSmall)
+        Text("Fast customer capture and product scanning for store-floor use.", style = MaterialTheme.typography.bodyMedium)
+        Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Default.QrCodeScanner, null, Modifier.size(44.dp))
+                Text("Scan Product Barcode / QR", style = MaterialTheme.typography.titleMedium)
+                Text("Scan a product code to open its catalogue item and continue directly to Try On.")
+                Button(onClick = { takeScan.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.QrCodeScanner, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Scan Product")
+                }
+            }
+        }
+        Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Staff workflow", style = MaterialTheme.typography.titleMedium)
+                Text("1. Capture customer")
+                Text("2. Scan product")
+                Text("3. Try On")
+                Text("4. Save selected items")
             }
         }
     }

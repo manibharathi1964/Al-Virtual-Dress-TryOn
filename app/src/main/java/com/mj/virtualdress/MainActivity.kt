@@ -61,6 +61,7 @@ private fun TryOnApp() {
     var garmentValidation by remember { mutableStateOf<String?>(null) }
     var garmentCategory by remember { mutableStateOf("auto") }
     var garmentColor by remember { mutableStateOf("Unknown") }
+    var regenerationMode by remember { mutableStateOf("Regenerate") }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -161,7 +162,8 @@ private fun TryOnApp() {
                         modelImage = personImage.dataUri,
                         garmentImage = garmentImage.dataUri,
                         category = garmentCategory,
-                        mode = "quality"
+                        mode = "quality",
+                        instruction = when (regenerationMode) {\n                            "Better Fit" -> "Prioritize natural garment fit and body alignment."\n                            "Preserve Face" -> "Prioritize exact preservation of face, skin, hair and identity."\n                            "Improve Details" -> "Prioritize fabric texture, seams, folds, draping and garment detail."\n                            else -> "Regenerate the result with improved overall realism."\n                        }
                     )
                 )
                 status = "AI try-on completed and quality checked."
@@ -236,6 +238,8 @@ private fun TryOnApp() {
                         onGenerate = { generateTryOn() },
                         onSave = { result?.let { runCatching { ResultActions.saveToGallery(context, it); status = "Saved to Gallery." }.onFailure { status = it.message ?: "Save failed." } } },
                         onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
+                        regenerationMode = regenerationMode,
+                        onRegenerationMode = { regenerationMode = it },
                         onReset = {
                             person = null
                             garment = null
@@ -392,6 +396,21 @@ private fun TryOnScreen(
                 Icon(Icons.Default.PhotoLibrary, null)
                 Spacer(Modifier.width(6.dp))
                 Text("Gallery")
+            }
+        }
+
+        Card(shape = RoundedCornerShape(18.dp)) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("AI regeneration controls", style = MaterialTheme.typography.titleMedium)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(listOf("Regenerate", "Better Fit", "Preserve Face", "Improve Details")) { mode ->
+                        FilterChip(
+                            selected = regenerationMode == mode,
+                            onClick = { onRegenerationMode(mode) },
+                            label = { Text(mode) }
+                        )
+                    }
+                }
             }
         }
 

@@ -14,7 +14,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.post("/v1/tryon", async (req, res) => {
-  const { model_image, garment_image, category = "auto", mode = "balanced" } = req.body ?? {};
+  const { model_image, garment_image, category = "auto", mode = "balanced", instruction = "" } = req.body ?? {};
 
   if (!model_image || !garment_image) {
     return res.status(400).json({ message: "model_image and garment_image are required." });
@@ -30,7 +30,7 @@ app.post("/v1/tryon", async (req, res) => {
       inputs: {
         model_image,
         product_image: garment_image,
-        prompt: "Apply the garment naturally as a realistic virtual try-on. Preserve the person's face, skin, hair, identity and pose. Keep body proportions correct, preserve the original background where appropriate, and produce natural garment fit, folds, draping, shadows and lighting. Garment category: " + category + ".",
+        prompt: "Apply the garment naturally as a realistic virtual try-on. Preserve the person's face, skin, hair, identity and pose. Keep body proportions correct, preserve the original background where appropriate, and produce natural garment fit, folds, draping, shadows and lighting. Garment category: " + category + ". Additional instruction: " + instruction,
         generation_mode: mode === "quality" ? "quality" : mode === "performance" ? "fast" : "balanced",
         resolution: "1k",
         num_images: 1,

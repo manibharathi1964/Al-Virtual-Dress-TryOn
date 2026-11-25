@@ -234,6 +234,8 @@ private fun TryOnApp() {
                         onColor = { selectedColor = it },
                         onSize = { selectedSize = it },
                         onGenerate = { generateTryOn() },
+                        onSave = { result?.let { runCatching { ResultActions.saveToGallery(context, it); status = "Saved to Gallery." }.onFailure { status = it.message ?: "Save failed." } } },
+                        onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
                         onReset = {
                             person = null
                             garment = null

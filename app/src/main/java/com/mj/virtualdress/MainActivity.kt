@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TryOnApp() {
     var tab by remember { mutableStateOf(AppTab.TRY_ON) }

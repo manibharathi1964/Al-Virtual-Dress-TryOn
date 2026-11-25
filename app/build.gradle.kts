@@ -48,5 +48,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta2")
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

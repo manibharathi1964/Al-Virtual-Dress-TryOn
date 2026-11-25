@@ -652,10 +652,10 @@ private fun CatalogueScreen(onSelect: (CatalogueProduct) -> Unit, onTryOn: (Cata
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    OutlinedButton(
-                        onClick = { onTryOn(product) },
-                        enabled = product.inStock
-                    ) { Text("Try On") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedButton(onClick = { onSelect(product) }, enabled = product.inStock) { Text("Select") }
+                        OutlinedButton(onClick = { onTryOn(product) }, enabled = product.inStock) { Text("Try On") }
+                    }
                 }
             }
         }

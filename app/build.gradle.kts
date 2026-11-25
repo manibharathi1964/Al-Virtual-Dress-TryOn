@@ -52,5 +52,6 @@ dependencies {
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.zxing:core:3.5.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

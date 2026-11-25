@@ -25,8 +25,19 @@ Status: Completed implementation on this branch.
 
 Important boundary: final visual realism is still dependent on the configured AI inference provider and its model output. The Android app now enforces the input/output quality gates and sends explicit quality-preservation instructions.
 
+## P4 — Store Catalogue
+Status: Completed implementation on phase-4-store-catalogue.
+
+- Product image, code, name, category and price.
+- Variant colors and sizes.
+- Per-size stock status and overall availability.
+- Search by product name/code.
+- Category filtering.
+- Catalogue product → Try On integration.
+- Out-of-stock products cannot be sent to Try On.
+
 ## Next
-P4 — Store Catalogue:
+P5 — Customer Workflow:
 - Product image
 - Product code
 - Product name

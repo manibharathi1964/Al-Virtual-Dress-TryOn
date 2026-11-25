@@ -54,6 +54,8 @@ private fun TryOnApp() {
     var selectedColor by remember { mutableStateOf("Black") }
     var selectedSize by remember { mutableStateOf("M") }
     var favorite by remember { mutableStateOf(false) }
+    val savedLooks by CustomerSessionStore.looks.collectAsState()
+    val selectedProducts by CustomerSessionStore.selected.collectAsState()
     var personValidation by remember { mutableStateOf<String?>(null) }
     var garmentValidation by remember { mutableStateOf<String?>(null) }
     var garmentCategory by remember { mutableStateOf("auto") }
@@ -259,8 +261,8 @@ private fun TryOnApp() {
                             )
                         }
                     })
-                    AppTab.FAVORITES -> FavoritesScreen(favorite)
-                    AppTab.COMPARE -> CompareScreen()
+                    AppTab.FAVORITES -> FavoritesScreen(savedLooks, onDelete = { CustomerSessionStore.removeLook(it) })
+                    AppTab.COMPARE -> CompareScreen(savedLooks)
                 }
             }
         }
@@ -510,42 +512,57 @@ private fun CatalogueScreen(onTryOn: (CatalogueProduct) -> Unit) {
 }
 
 @Composable
-private fun FavoritesScreen(hasFavorite: Boolean) {
+private fun FavoritesScreen(looks: List<SavedLook>, onDelete: (Long) -> Unit) {
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("My Favorites", style = MaterialTheme.typography.headlineSmall)
-        if (hasFavorite) {
-            Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Favorite, null, Modifier.size(36.dp))
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("Saved Try-On Look", style = MaterialTheme.typography.titleMedium)
-                        Text("Ready for comparison or sharing.")
-                    }
-                    IconButton(onClick = { }) {
-                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete")
+        if (looks.isEmpty()) {
+            EmptyState(Icons.Default.FavoriteBorder, "No favorites yet", "Save your best looks here.")
+        } else {
+            looks.forEach { look ->
+                Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(
+                            model = look.resultDataUri,
+                            contentDescription = "Saved try-on",
+                            modifier = Modifier.size(96.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(look.productName ?: "Saved Try-On Look", style = MaterialTheme.typography.titleMedium)
+                            Text("Color: ${look.color ?: "—"} · Size: ${look.size ?: "—"}")
+                            Text("Saved for compare and selection.", style = MaterialTheme.typography.bodySmall)
+                        }
+                        IconButton(onClick = { onDelete(look.id) }) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Delete")
+                        }
                     }
                 }
             }
-        } else {
-            EmptyState(Icons.Default.FavoriteBorder, "No favorites yet", "Save your best looks here.")
         }
     }
 }
 
 @Composable
-private fun CompareScreen() {
+private fun CompareScreen(looks: List<SavedLook>) {
+    var selectedCount by remember { mutableStateOf(2) }
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Compare Looks", style = MaterialTheme.typography.headlineSmall)
-        Text("Compare two or more saved try-on results side by side.", style = MaterialTheme.typography.bodyMedium)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CompareSlot("Look 1", Modifier.weight(1f))
-            CompareSlot("Look 2", Modifier.weight(1f))
-        }
-        Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Default.Compare, null)
-            Spacer(Modifier.width(8.dp))
-            Text("Compare Selected Looks")
+        Text("Before/after and multi-dress comparison.", style = MaterialTheme.typography.bodyMedium)
+        if (looks.size >= 2) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(looks.take(4)) { look ->
+                    Card(Modifier.width(150.dp), shape = RoundedCornerShape(16.dp)) {
+                        AsyncImage(model = look.resultDataUri, contentDescription = "Saved look", modifier = Modifier.height(190.dp).fillMaxWidth(), contentScale = ContentScale.Crop)
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = selectedCount == 2, onClick = { selectedCount = 2 }, label = { Text("2 looks") })
+                FilterChip(selected = selectedCount == 4, onClick = { selectedCount = 4 }, label = { Text("4 looks") })
+            }
+        } else {
+            EmptyState(Icons.Default.Compare, "Need more saved looks", "Save at least two try-on results to compare.")
         }
     }
 }

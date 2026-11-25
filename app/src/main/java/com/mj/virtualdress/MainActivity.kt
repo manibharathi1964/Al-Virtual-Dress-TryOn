@@ -26,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 private enum class AppTab(val label: String, val icon: ImageVector) {
     TRY_ON("Try On", Icons.Default.Checkroom),
@@ -45,39 +46,80 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun TryOnApp() {
     var tab by remember { mutableStateOf(AppTab.TRY_ON) }
-    var personModel by remember { mutableStateOf<Any?>(null) }
-    var dressModel by remember { mutableStateOf<Any?>(null) }
+    var person by remember { mutableStateOf<SelectedImage?>(null) }
+    var garment by remember { mutableStateOf<SelectedImage?>(null) }
+    var result by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf("Ready when you are") }
     var isGenerating by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf("Black") }
     var selectedSize by remember { mutableStateOf("M") }
     var favorite by remember { mutableStateOf(false) }
 
-    val pickPerson = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-        personModel = it
-        if (it != null) status = "Person photo selected"
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    val api = remember { TryOnApi() }
+
+    val pickPerson = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        person = uri?.let { context.readImageAsDataUri(it) }
+        if (person != null) {
+            result = null
+            status = "Person photo selected"
+        }
     }
-    val pickDress = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) {
-        dressModel = it
-        if (it != null) status = "Garment selected"
+    val pickDress = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        garment = uri?.let { context.readImageAsDataUri(it) }
+        if (garment != null) {
+            result = null
+            status = "Garment selected"
+        }
     }
     val takePerson = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            personModel = bitmap.asImageBitmap()
+            person = bitmapToSelectedImage(bitmap)
+            result = null
             status = "Person photo captured"
         }
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) takePerson.launch(null)
-        else status = "Camera permission is required."
+        if (granted) takePerson.launch(null) else status = "Camera permission is required."
     }
-    val context = androidx.compose.ui.platform.LocalContext.current
 
     fun capturePerson() {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
             takePerson.launch(null)
         } else {
             cameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    fun generateTryOn() {
+        val personImage = person
+        val garmentImage = garment
+        if (personImage == null || garmentImage == null) {
+            status = "Select a person photo and garment first."
+            return
+        }
+
+        scope.launch {
+            isGenerating = true
+            result = null
+            status = "Preparing person image..."
+            try {
+                status = "Sending person + garment to AI..."
+                result = api.generate(
+                    TryOnRequest(
+                        modelImage = personImage.dataUri,
+                        garmentImage = garmentImage.dataUri,
+                        category = "auto",
+                        mode = "balanced"
+                    )
+                )
+                status = "AI try-on completed."
+            } catch (error: Exception) {
+                status = error.message ?: "AI try-on failed. Please retry."
+            } finally {
+                isGenerating = false
+            }
         }
     }
 
@@ -125,8 +167,9 @@ private fun TryOnApp() {
             Box(Modifier.fillMaxSize().padding(padding)) {
                 when (tab) {
                     AppTab.TRY_ON -> TryOnScreen(
-                        personModel = personModel,
-                        dressModel = dressModel,
+                        person = person,
+                        garment = garment,
+                        result = result,
                         status = status,
                         isGenerating = isGenerating,
                         selectedColor = selectedColor,
@@ -136,17 +179,11 @@ private fun TryOnApp() {
                         onCamera = { capturePerson() },
                         onColor = { selectedColor = it },
                         onSize = { selectedSize = it },
-                        onGenerate = {
-                            if (personModel != null && dressModel != null) {
-                                isGenerating = true
-                                status = "Preparing person image..."
-                            } else {
-                                status = "Select a person photo and garment first."
-                            }
-                        },
+                        onGenerate = { generateTryOn() },
                         onReset = {
-                            personModel = null
-                            dressModel = null
+                            person = null
+                            garment = null
+                            result = null
                             isGenerating = false
                             status = "Ready when you are"
                         }
@@ -155,18 +192,6 @@ private fun TryOnApp() {
                     AppTab.FAVORITES -> FavoritesScreen(favorite)
                     AppTab.COMPARE -> CompareScreen()
                 }
-
-                if (isGenerating) {
-                    LaunchedEffect(isGenerating) {
-                        kotlinx.coroutines.delay(650)
-                        status = "Detecting body and garment..."
-                        kotlinx.coroutines.delay(650)
-                        status = "Applying garment and refining fit..."
-                        kotlinx.coroutines.delay(650)
-                        status = "Preview pipeline ready for AI inference."
-                        isGenerating = false
-                    }
-                }
             }
         }
     }
@@ -174,8 +199,9 @@ private fun TryOnApp() {
 
 @Composable
 private fun TryOnScreen(
-    personModel: Any?,
-    dressModel: Any?,
+    person: SelectedImage?,
+    garment: SelectedImage?,
+    result: String?,
     status: String,
     isGenerating: Boolean,
     selectedColor: String,
@@ -193,23 +219,34 @@ private fun TryOnScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Create your look", style = MaterialTheme.typography.headlineSmall)
-        Text("Capture yourself, choose a garment, then preview the outfit.", style = MaterialTheme.typography.bodyMedium)
+        Text("Capture yourself, choose a garment, then generate a real AI try-on.", style = MaterialTheme.typography.bodyMedium)
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InputCard(
-                title = "Person",
-                model = personModel,
-                icon = Icons.Default.Person,
-                onClick = onPickPerson,
-                modifier = Modifier.weight(1f)
-            )
-            InputCard(
-                title = "Garment",
-                model = dressModel,
-                icon = Icons.Default.Checkroom,
-                onClick = onPickDress,
-                modifier = Modifier.weight(1f)
-            )
+        if (result != null) {
+            Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
+                AsyncImage(
+                    model = result,
+                    contentDescription = "AI virtual try-on result",
+                    modifier = Modifier.fillMaxWidth().height(360.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                InputCard(
+                    title = "Person",
+                    model = person?.previewModel,
+                    icon = Icons.Default.Person,
+                    onClick = onPickPerson,
+                    modifier = Modifier.weight(1f)
+                )
+                InputCard(
+                    title = "Garment",
+                    model = garment?.previewModel,
+                    icon = Icons.Default.Checkroom,
+                    onClick = onPickDress,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -259,7 +296,7 @@ private fun TryOnScreen(
             Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, null)
                 Spacer(Modifier.width(10.dp))
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(status, style = MaterialTheme.typography.bodyMedium)
                     if (isGenerating) {
                         Spacer(Modifier.height(8.dp))
@@ -277,7 +314,7 @@ private fun TryOnScreen(
         ) {
             Icon(Icons.Default.AutoAwesome, null)
             Spacer(Modifier.width(8.dp))
-            Text(if (isGenerating) "Preparing Try-On..." else "Create Virtual Try-On")
+            Text(if (isGenerating) "Generating AI Try-On..." else "Create Virtual Try-On")
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

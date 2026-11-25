@@ -62,10 +62,10 @@ private fun TryOnApp() {
     var garmentCategory by remember { mutableStateOf("auto") }
     var garmentColor by remember { mutableStateOf("Unknown") }
     var regenerationMode by remember { mutableStateOf("Regenerate") }
-    var consentGranted by remember { mutableStateOf(PrivacyManager.hasConsent(context)) }
-    var showPrivacy by remember { mutableStateOf(!consentGranted) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    var consentGranted by remember { mutableStateOf(PrivacyManager.hasConsent(context)) }
+    var showPrivacy by remember { mutableStateOf(!consentGranted) }
     val scope = rememberCoroutineScope()
     val api = remember { TryOnApi() }
 

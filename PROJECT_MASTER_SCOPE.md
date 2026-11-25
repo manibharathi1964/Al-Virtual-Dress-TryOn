@@ -31,6 +31,22 @@ Production dependency:
 ## P2 — Input quality
 Person detection, garment isolation, pose/body checks and photo quality validation.
 
+Status: IN PROGRESS.
+
+Implemented in the current P2 work:
+- On-device photo quality checks for resolution, lighting and sharpness.
+- ML Kit accurate pose detection for static person photos.
+- ML Kit selfie segmentation for foreground/person isolation signals.
+- Person photo validation is executed before AI try-on generation.
+- Garment image resolution/aspect validation is executed before AI try-on generation.
+- Validation feedback is shown directly in the Try-On screen.
+
+Remaining P2 work:
+- Production-grade garment isolation/segmentation.
+- Automatic garment category detection.
+- Automatic garment color detection.
+- Stronger full-body framing/pose rules.
+
 ## P3 — Result quality
 Identity preservation, folds, shadows, proportions and resolution tuning.
 

@@ -12,11 +12,19 @@ android {
         applicationId = "com.mj.virtualdress"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+
+        val vtoApiBaseUrl = providers.gradleProperty("vtoApiBaseUrl")
+            .orElse("http://10.0.2.2:8080")
+            .get()
+        buildConfigField("String", "VTO_API_BASE_URL", "\"$vtoApiBaseUrl\"")
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -26,6 +34,7 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
@@ -38,5 +47,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta2")
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("com.google.zxing:core:3.5.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

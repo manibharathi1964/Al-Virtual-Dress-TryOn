@@ -1,18 +1,27 @@
 # AI Virtual Dress Try-On
 
-A professional Android foundation for a clothing-store virtual try-on experience.
+A professional Android foundation for a commercial AI virtual dressing-room experience.
 
-## Current foundation
-- Person photo selection from gallery
-- Person photo capture with camera
+## Current app foundation
+- Clean Material 3 Android UI
+- Person photo capture and gallery import
 - Garment photo selection
-- Modern Material 3 UI
-- Try-on workflow state
-- Clear integration point for a real AI inference service
-- Reset and save workflow placeholders
+- Product color and size variants
+- Try-on workflow with meaningful processing stages
+- Catalogue, Favorites, and Compare sections
+- Reset workflow
+- Professional, simple app icon
+- GitHub Actions debug APK build
+- APK artifact name: `Al-Virtual-Dress-TryOn.apk`
 
 ## Product direction
-Person photo -> garment capture/selection -> AI virtual try-on -> realistic result -> comparison/favorites/catalogue/share.
+Person photo -> garment selection/scan -> AI virtual try-on -> realistic result -> variants -> outfit composition -> compare/favorites -> catalogue selection -> save/download/share.
 
-## Important
-A realistic generative virtual try-on requires a dedicated inference model/service. This first commit deliberately establishes the Android client foundation and does not pretend that a simple image overlay is equivalent to production AI generation.
+## AI inference boundary
+The Android client is prepared for a dedicated generative virtual try-on inference service. A production-quality result requires an actual VTO model/service; the client must not fake this with a simple image overlay.
+
+## Build
+GitHub Actions builds the debug APK on pushes to `main` and pull requests. The workflow renames the generated APK to `Al-Virtual-Dress-TryOn.apk`.
+
+## Scope reference
+The project scope includes P0 build stability through P9 privacy hardening, with realistic AI generation as the core capability.

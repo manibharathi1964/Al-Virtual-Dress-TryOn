@@ -54,6 +54,8 @@ private fun TryOnApp() {
     var selectedColor by remember { mutableStateOf("Black") }
     var selectedSize by remember { mutableStateOf("M") }
     var favorite by remember { mutableStateOf(false) }
+    var personValidation by remember { mutableStateOf<String?>(null) }
+    var garmentValidation by remember { mutableStateOf<String?>(null) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
@@ -219,7 +221,7 @@ private fun TryOnScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Create your look", style = MaterialTheme.typography.headlineSmall)
-        Text("Capture yourself, choose a garment, then generate a real AI try-on.", style = MaterialTheme.typography.bodyMedium)
+        Text("Capture yourself, choose a garment, then generate a real AI try-on.", style = MaterialTheme.typography.bodyMedium)\n        personValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }\n        garmentValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
         if (result != null) {
             Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {

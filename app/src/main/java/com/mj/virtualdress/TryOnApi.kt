@@ -8,6 +8,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+data class TryOnResponse(
+    val imageDataUri: String,
+    val resultUrl: String?
+)
+
 data class TryOnRequest(
     val modelImage: String,
     val garmentImage: String,
@@ -23,7 +28,7 @@ class TryOnApi {
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    suspend fun generate(request: TryOnRequest): String {
+    suspend fun generate(request: TryOnRequest): TryOnResponse {
         val payload = JSONObject()
             .put("model_image", request.modelImage)
             .put("garment_image", request.garmentImage)
@@ -55,7 +60,7 @@ class TryOnApi {
             if (image.isBlank()) throw IOException("Try-on service returned no result image.")
             val quality = TryOnResultValidator.validate(image)
             if (!quality.accepted) throw IOException(quality.message)
-            return image
+            return TryOnResponse(image, JSONObject(text).optString("result_url").ifBlank { null })
         }
     }
 }

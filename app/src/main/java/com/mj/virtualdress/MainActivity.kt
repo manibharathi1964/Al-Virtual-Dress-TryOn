@@ -372,7 +372,7 @@ private fun TryOnApp() {
                         }
                     })
                     AppTab.FAVORITES -> FavoritesScreen(savedLooks, selectedProducts, onDelete = { CustomerSessionStore.removeLook(it) }, onRemoveProduct = { CustomerSessionStore.removeProduct(it) })
-                    AppTab.COMPARE -> CompareScreen(savedLooks)
+                    AppTab.COMPARE -> CompareScreen(person, savedLooks)
                     AppTab.OUTFIT -> OutfitComposerScreen(catalogue, outfitProducts, onAdd = { outfitProducts = OutfitComposer.add(outfitProducts, it) }, onRemove = { outfitProducts = OutfitComposer.remove(outfitProducts, it) }, onApply = { selected -> outfitProducts = selected.products; outfitInstruction = selected.instruction(); selected.primary?.let { product -> tab = AppTab.TRY_ON; scope.launch { runCatching { CatalogueRepository.loadProductImage(product) }.fold({ image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Outfit primary: " + product.name; status = "Outfit ready. Add the selected look and generate." }, { status = "Could not load outfit product." }) } } })
                     AppTab.STAFF -> StaffModeScreen(onScan = { bitmap ->
                         scope.launch {
@@ -803,25 +803,36 @@ private fun FavoritesScreen(looks: List<SavedLook>, selectedProducts: List<Selec
 }
 
 @Composable
-private fun CompareScreen(looks: List<SavedLook>) {
+@Composable
+private fun CompareScreen(person: SelectedImage?, looks: List<SavedLook>) {
     var selectedCount by remember { mutableStateOf(2) }
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("Compare Looks", style = MaterialTheme.typography.headlineSmall)
-        Text("Before/after and multi-dress comparison.", style = MaterialTheme.typography.bodyMedium)
-        if (looks.size >= 2) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(looks.take(4)) { look ->
-                    Card(Modifier.width(150.dp), shape = RoundedCornerShape(16.dp)) {
-                        AsyncImage(model = look.resultDataUri, contentDescription = "Saved look", modifier = Modifier.height(190.dp).fillMaxWidth(), contentScale = ContentScale.Crop)
-                    }
-                }
+        Text("Original vs Try-On, two-look and four-look comparison.", style = MaterialTheme.typography.bodyMedium)
+        if (person != null) {
+            Text("Before / After", style = MaterialTheme.typography.titleMedium)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                AsyncImage(model = person.previewModel, contentDescription = "Original person", modifier = Modifier.weight(1f).height(220.dp), contentScale = ContentScale.Crop)
+                if (looks.isNotEmpty()) AsyncImage(model = looks.first().resultDataUri, contentDescription = "Try-on result", modifier = Modifier.weight(1f).height(220.dp), contentScale = ContentScale.Crop)
             }
+        }
+        if (looks.size >= 2) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = selectedCount == 2, onClick = { selectedCount = 2 }, label = { Text("2 looks") })
                 FilterChip(selected = selectedCount == 4, onClick = { selectedCount = 4 }, label = { Text("4 looks") })
             }
-        } else {
-            EmptyState(Icons.Default.Compare, "Need more saved looks", "Save at least two try-on results to compare.")
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(looks.take(selectedCount)) { look ->
+                    Card(Modifier.width(150.dp), shape = RoundedCornerShape(16.dp)) {
+                        Column {
+                            AsyncImage(model = look.resultDataUri, contentDescription = "Saved look", modifier = Modifier.height(190.dp).fillMaxWidth(), contentScale = ContentScale.Crop)
+                            Text((look.color ?: "Unknown") + " · " + (look.size ?: "—"), modifier = Modifier.padding(8.dp), style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                }
+            }
+        } else if (person == null || looks.isEmpty()) {
+            EmptyState(Icons.Default.Compare, "Need saved results", "Save try-on results to compare before/after and multiple looks.")
         }
     }
 }

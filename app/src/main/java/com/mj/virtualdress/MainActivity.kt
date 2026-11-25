@@ -338,7 +338,9 @@ private fun TryOnScreen(
     onColor: (String) -> Unit,
     onSize: (String) -> Unit,
     onGenerate: () -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onSave: () -> Unit,
+    onShare: () -> Unit
 ) {
     Column(
         Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
@@ -454,7 +456,12 @@ private fun TryOnScreen(
                 Spacer(Modifier.width(6.dp))
                 Text("Reset")
             }
-            OutlinedButton(onClick = { }, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onSave, modifier = Modifier.weight(1f), enabled = result != null) {
+                Icon(Icons.Default.Download, null)
+                Spacer(Modifier.width(6.dp))
+                Text("Save")
+            }
+            OutlinedButton(onClick = onShare, modifier = Modifier.weight(1f), enabled = result != null) {
                 Icon(Icons.Default.Share, null)
                 Spacer(Modifier.width(6.dp))
                 Text("Share")

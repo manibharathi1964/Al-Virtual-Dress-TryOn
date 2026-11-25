@@ -32,7 +32,11 @@ class TryOnApi {
             .put("instruction", request.instruction)
 
         val body = payload.toString().toRequestBody("application/json".toMediaType())
-        val url = BuildConfig.VTO_API_BASE_URL.trimEnd('/') + "/v1/tryon"
+        val baseUrl = BuildConfig.VTO_API_BASE_URL.trimEnd('/')
+        if (!baseUrl.startsWith("https://") && !baseUrl.startsWith("http://10.0.2.2") && !baseUrl.startsWith("http://localhost")) {
+            throw IOException("Secure HTTPS AI server URL is required.")
+        }
+        val url = baseUrl + "/v1/tryon"
 
         val httpRequest = Request.Builder()
             .url(url)

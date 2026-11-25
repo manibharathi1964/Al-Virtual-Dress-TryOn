@@ -130,6 +130,7 @@ private fun TryOnApp() {
                         isGenerating = isGenerating,
                         selectedColor = selectedColor,
                         selectedSize = selectedSize,
+                        onSize = { selectedSize = it },
                         onPickPerson = { pickPerson.launch("image/*") },
                         onPickDress = { pickDress.launch("image/*") },
                         onCamera = { capturePerson() },
@@ -179,6 +180,7 @@ private fun TryOnScreen(
     isGenerating: Boolean,
     selectedColor: String,
     selectedSize: String,
+    onSize: (String) -> Unit,
     onPickPerson: () -> Unit,
     onPickDress: () -> Unit,
     onCamera: () -> Unit,
@@ -230,7 +232,7 @@ private fun TryOnScreen(
                     items(listOf("S", "M", "L", "XL")) { size ->
                         FilterChip(
                             selected = selectedSize == size,
-                            onClick = { onColor(selectedColor); /* state is owned by parent */ },
+                            onClick = { onSize(size) },
                             label = { Text(size) }
                         )
                     }

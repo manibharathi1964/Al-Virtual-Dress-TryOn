@@ -59,8 +59,13 @@ app.post("/v1/tryon", async (req, res) => {
     const image = Array.isArray(result.output) ? result.output[0] : null;
     if (!image) return res.status(502).json({ message: "AI service returned no image." });
 
+    const resultId = crypto.randomUUID();
+    const base64 = image.includes(",") ? image.split(",")[1] : image;
+    results.set(resultId, { base64, createdAt: Date.now() });
+    const resultUrl = publicBaseUrl ? publicBaseUrl + "/v1/results/" + resultId : null;
     return res.json({
       image_data_uri: image,
+      result_url: resultUrl,
       provider: "FASHN",
       model: "tryon-max"
     });
@@ -71,6 +76,11 @@ app.post("/v1/tryon", async (req, res) => {
   }
 });
 
-setInterval(() => {\n  const cutoff = Date.now() - 30 * 60 * 1000;\n  for (const [id, item] of results) if (item.createdAt < cutoff) results.delete(id);\n}, 5 * 60 * 1000);\n\napp.listen(port, () => {
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, item] of results) if (item.createdAt < cutoff) results.delete(id);
+}, 5 * 60 * 1000);
+
+app.listen(port, () => {
   console.log("AI Virtual Dress Try-On server listening on :" + port);
 });

@@ -16,7 +16,7 @@ android {
         versionName = "0.2.0"
 
         val vtoApiBaseUrl = providers.gradleProperty("vtoApiBaseUrl")
-            .orElse("http://10.0.2.2:8080")
+            .orElse("https://burhanbhatti-tryon-vton-api.hf.space")
             .get()
         buildConfigField("String", "VTO_API_BASE_URL", "\"$vtoApiBaseUrl\"")
     }

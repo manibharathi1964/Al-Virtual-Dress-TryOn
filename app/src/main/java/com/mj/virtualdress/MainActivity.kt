@@ -240,6 +240,7 @@ private fun TryOnApp() {
                         onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
                         regenerationMode = regenerationMode,
                         onRegenerationMode = { regenerationMode = it },
+                        onSuggestion = { product ->\n                            scope.launch {\n                                runCatching { CatalogueRepository.loadProductImage(product) }.fold(\n                                    { image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Style Assistant: ${product.name}"; status = "Recommended product loaded. Ready for Try On." },\n                                    { status = "Could not load recommendation." }\n                                )\n                            }\n                        },
                         onReset = {
                             person = null
                             garment = null
@@ -344,7 +345,10 @@ private fun TryOnScreen(
     onGenerate: () -> Unit,
     onReset: () -> Unit,
     onSave: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    regenerationMode: String,
+    onRegenerationMode: (String) -> Unit,
+    onSuggestion: (CatalogueProduct) -> Unit
 ) {
     Column(
         Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
@@ -396,6 +400,26 @@ private fun TryOnScreen(
                 Icon(Icons.Default.PhotoLibrary, null)
                 Spacer(Modifier.width(6.dp))
                 Text("Gallery")
+            }
+        }
+
+        if (garmentCategory != "auto") {
+            val suggestions = StyleAssistant.recommend(garmentCategory, garmentColor)
+            if (suggestions.isNotEmpty()) {
+                Card(shape = RoundedCornerShape(18.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("AI Style Assistant", style = MaterialTheme.typography.titleMedium)
+                        Text("Catalogue-available matches for your current garment.")
+                        suggestions.forEach { suggestion ->
+                            OutlinedButton(
+                                onClick = { onSuggestion(suggestion.product) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(suggestion.title + " · " + suggestion.reason)
+                            }
+                        }
+                    }
+                }
             }
         }
 

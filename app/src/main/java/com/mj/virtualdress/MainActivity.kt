@@ -50,6 +50,7 @@ private fun TryOnApp() {
     var person by remember { mutableStateOf<SelectedImage?>(null) }
     var garment by remember { mutableStateOf<SelectedImage?>(null) }
     var result by remember { mutableStateOf<String?>(null) }
+    var resultUrl by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf("Ready when you are") }
     var isGenerating by remember { mutableStateOf(false) }
     var selectedColor by remember { mutableStateOf("Black") }
@@ -66,6 +67,7 @@ private fun TryOnApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
     var consentGranted by remember { mutableStateOf(PrivacyManager.hasConsent(context)) }
     var showPrivacy by remember { mutableStateOf(!consentGranted) }
+    var qrDialog by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val api = remember { TryOnApi() }
 
@@ -175,7 +177,7 @@ private fun TryOnApp() {
                 }
 
                 status = "Applying garment with identity-preserving AI..."
-                result = api.generate(
+                val response = api.generate(
                     TryOnRequest(
                         modelImage = personImage.dataUri,
                         garmentImage = garmentImage.dataUri,
@@ -189,6 +191,8 @@ private fun TryOnApp() {
                         }
                     )
                 )
+                result = response.imageDataUri
+                resultUrl = response.resultUrl
                 status = "AI try-on completed and quality checked."
             } catch (error: Exception) {
                 status = error.message ?: "AI try-on failed. Please retry."
@@ -196,6 +200,22 @@ private fun TryOnApp() {
                 isGenerating = false
             }
         }
+    }
+
+    qrDialog?.let { url ->
+        AlertDialog(
+            onDismissRequest = { qrDialog = null },
+            title = { Text("Scan to open result") },
+            text = {
+                androidx.compose.foundation.Image(
+                    bitmap = ResultActions.qrBitmap(url).asImageBitmap(),
+                    contentDescription = "Result QR code",
+                    modifier = Modifier.fillMaxWidth().height(280.dp),
+                    contentScale = ContentScale.Fit
+                )
+            },
+            confirmButton = { TextButton(onClick = { qrDialog = null }) { Text("Close") } }
+        )
     }
 
     if (showPrivacy) {
@@ -282,6 +302,7 @@ private fun TryOnApp() {
                         onGenerate = { generateTryOn() },
                         onSave = { result?.let { runCatching { ResultActions.saveToGallery(context, it); status = "Saved to Gallery." }.onFailure { status = it.message ?: "Save failed." } } },
                         onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
+                        onQr = { resultUrl?.let { qrDialog = it } },
                         regenerationMode = regenerationMode,
                         onRegenerationMode = { regenerationMode = it },
                         onSuggestion = { product ->
@@ -397,6 +418,7 @@ private fun TryOnScreen(
     onReset: () -> Unit,
     onSave: () -> Unit,
     onShare: () -> Unit,
+    onQr: () -> Unit,
     regenerationMode: String,
     onRegenerationMode: (String) -> Unit,
     onSuggestion: (CatalogueProduct) -> Unit
@@ -559,6 +581,11 @@ private fun TryOnScreen(
                 Icon(Icons.Default.Share, null)
                 Spacer(Modifier.width(6.dp))
                 Text("Share")
+            }
+            OutlinedButton(onClick = onQr, modifier = Modifier.weight(1f), enabled = resultUrl != null) {
+                Icon(Icons.Default.QrCode2, null)
+                Spacer(Modifier.width(6.dp))
+                Text("QR")
             }
         }
     }

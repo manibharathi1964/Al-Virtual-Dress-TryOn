@@ -243,7 +243,7 @@ private fun TryOnApp() {
                             status = "Ready when you are"
                         }
                     )
-                    AppTab.CATALOGUE -> CatalogueScreen()
+                    AppTab.CATALOGUE -> CatalogueScreen(onTryOn = { product ->\n                        tab = AppTab.TRY_ON\n                        status = "Loading ${product.name}..."\n                        scope.launch {\n                            runCatching { CatalogueRepository.loadProductImage(product) }.fold(\n                                { image ->\n                                    garment = image\n                                    garmentCategory = product.category\n                                    garmentColor = product.colors.firstOrNull() ?: "Unknown"\n                                    garmentValidation = "✓ ${product.name} · ${product.category}"\n                                    status = "Catalogue product ready for try-on."\n                                },\n                                { status = "Could not load catalogue product: ${it.message}" }\n                            )\n                        }\n                    })
                     AppTab.FAVORITES -> FavoritesScreen(favorite)
                     AppTab.COMPARE -> CompareScreen()
                 }
@@ -433,26 +433,61 @@ private fun InputCard(
 }
 
 @Composable
-private fun CatalogueScreen() {
-    val products = listOf(
-        "Classic Black Shirt" to "₹899",
-        "Premium Blue Jeans" to "₹1,299",
-        "Modern Jacket" to "₹1,799",
-        "Elegant Kurti" to "₹1,099"
-    )
-    Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+private fun CatalogueScreen(onTryOn: (CatalogueProduct) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("All") }
+    val categories = listOf("All", "Shirt", "Jeans", "Jacket", "Kurti")
+    val products = StoreCatalogue.products.filter {
+        (category == "All" || it.category == category) &&
+            (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.code.contains(query, ignoreCase = true))
+    }
+
+    Column(
+        Modifier.fillMaxSize().padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         Text("Store Catalogue", style = MaterialTheme.typography.headlineSmall)
-        Text("Browse products and send any item to Try On.", style = MaterialTheme.typography.bodyMedium)
-        products.forEach { (name, price) ->
-            Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Checkroom, null, Modifier.size(34.dp))
+        Text("Product → Catalogue → Try On", style = MaterialTheme.typography.bodyMedium)
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Search product or code") },
+            leadingIcon = { Icon(Icons.Default.Search, null) }
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(categories) { item ->
+                FilterChip(
+                    selected = category == item,
+                    onClick = { category = item },
+                    label = { Text(item) }
+                )
+            }
+        }
+        products.forEach { product ->
+            Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = product.imageUrl,
+                        contentDescription = product.name,
+                        modifier = Modifier.size(76.dp),
+                        contentScale = ContentScale.Crop
+                    )
                     Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(name, style = MaterialTheme.typography.titleMedium)
-                        Text(price, style = MaterialTheme.typography.bodyMedium)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(product.name, style = MaterialTheme.typography.titleMedium)
+                        Text(product.code + " · " + product.category, style = MaterialTheme.typography.labelSmall)
+                        Text("₹" + product.price, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (product.inStock) "In stock · " + product.colors.joinToString() else "Out of stock",
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                    OutlinedButton(onClick = { }) { Text("Try On") }
+                    OutlinedButton(
+                        onClick = { onTryOn(product) },
+                        enabled = product.inStock
+                    ) { Text("Try On") }
                 }
             }
         }

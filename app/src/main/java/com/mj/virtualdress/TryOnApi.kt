@@ -12,7 +12,8 @@ data class TryOnRequest(
     val modelImage: String,
     val garmentImage: String,
     val category: String = "auto",
-    val mode: String = "balanced"
+    val mode: String = "balanced",
+    val instruction: String = ""
 )
 
 class TryOnApi {
@@ -28,6 +29,7 @@ class TryOnApi {
             .put("garment_image", request.garmentImage)
             .put("category", request.category)
             .put("mode", request.mode)
+            .put("instruction", request.instruction)
 
         val body = payload.toString().toRequestBody("application/json".toMediaType())
         val url = BuildConfig.VTO_API_BASE_URL.trimEnd('/') + "/v1/tryon"

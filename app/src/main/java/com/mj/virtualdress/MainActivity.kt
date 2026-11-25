@@ -352,7 +352,7 @@ private fun TryOnApp() {
                             status = "Ready when you are"
                         }
                     )
-                    AppTab.CATALOGUE -> CatalogueScreen(catalogue = catalogue, onSelect = { product -> CustomerSessionStore.addProduct(SelectedProduct(product, product.colors.firstOrNull() ?: "Default", product.sizes.firstOrNull() ?: "M")) }, onTryOn = { product ->
+                    AppTab.CATALOGUE -> CatalogueScreen(catalogue = catalogue, onSelect = { CustomerSessionStore.addProduct(it) }, onTryOn = { product ->
                         tab = AppTab.TRY_ON
                         status = "Loading ${product.name}..."
                         scope.launch {
@@ -682,7 +682,7 @@ private fun InputCard(
 }
 
 @Composable
-private fun CatalogueScreen(catalogue: List<CatalogueProduct>, onSelect: (CatalogueProduct) -> Unit, onTryOn: (CatalogueProduct) -> Unit) {
+private fun CatalogueScreen(catalogue: List<CatalogueProduct>, onSelect: (SelectedProduct) -> Unit, onTryOn: (CatalogueProduct) -> Unit) {
     var query by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
     val categories = listOf("All", "Shirt", "Jeans", "Jacket", "Kurti")

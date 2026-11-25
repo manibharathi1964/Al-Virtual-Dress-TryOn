@@ -22,6 +22,8 @@ Status: Completed implementation.
 
 ## P4 — Store Catalogue
 Status: Completed implementation.
+- Real color/size variant selection.
+- Pattern and material metadata.
 - Product image, code, name, category, price.
 - Colors, sizes and per-size stock.
 - Search and category filtering.
@@ -30,6 +32,9 @@ Status: Completed implementation.
 
 ## P5 — Customer Workflow
 Status: Completed implementation.
+- Before/after comparison.
+- Two-look and four-look comparison.
+- Color/size comparison metadata.
 - Temporary customer session.
 - Favorites with saved try-on results.
 - Remove favorites.
@@ -47,6 +52,8 @@ Status: Completed implementation.
 
 ## P7 — Convenience
 Status: Completed implementation boundary.
+- Staged progress messaging: preparing, detecting, applying, improving, finalizing.
+- Local catalogue metadata cache for weak/offline browsing.
 - Save generated result to Gallery.
 - Share generated result using Android share targets.
 - Meaningful AI processing status/progress.
@@ -57,6 +64,7 @@ Status: Completed implementation boundary.
 
 ## P8 — Premium AI
 Status: Completed implementation boundary.
+- Full outfit composer with multi-product catalogue selection and AI composition instructions.
 - Regenerate.
 - Better Fit.
 - Preserve Face.
@@ -74,6 +82,16 @@ Status: Completed implementation boundary.
 - HTTPS enforcement for deployed AI endpoints.
 - User-facing privacy summary.
 - Temporary QR result expiry.
+
+### Remaining verification / production tasks
+- Run a successful GitHub Actions Android build on the latest phase-9 branch.
+- Fix any compiler/test issues found by CI.
+- Configure and verify the deployed AI server with a real FASHN_API_KEY.
+- Configure PUBLIC_BASE_URL and verify QR result retrieval from a real phone.
+- Verify offline catalogue behavior with network disabled and image-cache behavior.
+- Perform final device-level QA across camera, gallery, try-on, catalogue variants, outfit composer, comparison, Staff Mode, save/share/QR and privacy expiry.
+- Merge the verified P2-P9 branch into main.
+- Only after all verification passes, generate and deliver Al-Virtual-Dress-TryOn.apk.
 
 ### Final verification boundary
 The feature implementation across P2–P9 is complete on this branch. Production readiness still requires a real deployed AI provider/server, a configured FASHN API key, PUBLIC_BASE_URL for QR delivery, and a successful Android build/test verification. No final APK is being declared until those checks pass.

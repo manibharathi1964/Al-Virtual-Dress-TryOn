@@ -47,6 +47,8 @@ class TryOnApi {
 
             val image = JSONObject(text).optString("image_data_uri")
             if (image.isBlank()) throw IOException("Try-on service returned no result image.")
+            val quality = TryOnResultValidator.validate(image)
+            if (!quality.accepted) throw IOException(quality.message)
             return image
         }
     }

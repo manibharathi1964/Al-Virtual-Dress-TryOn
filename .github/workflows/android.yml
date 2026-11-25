@@ -28,6 +28,21 @@ jobs:
         with:
           gradle-version: '8.10'
 
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm install
+
+      - name: Server smoke test
+        working-directory: server
+        run: npm test
+
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 

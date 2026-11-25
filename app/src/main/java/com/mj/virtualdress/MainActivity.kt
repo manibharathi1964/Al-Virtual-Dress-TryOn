@@ -63,9 +63,11 @@ private fun TryOnApp() {
         if (granted) takePerson.launch(null) else status = "Camera permission is required to capture a person photo."
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     fun capturePerson() {
         if (ContextCompat.checkSelfPermission(
-                androidx.compose.ui.platform.LocalContext.current, Manifest.permission.CAMERA
+                context, Manifest.permission.CAMERA
             ) == PackageManager.PERMISSION_GRANTED
         ) takePerson.launch(null)
         else cameraPermission.launch(Manifest.permission.CAMERA)

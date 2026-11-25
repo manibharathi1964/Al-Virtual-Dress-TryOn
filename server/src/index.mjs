@@ -1,16 +1,27 @@
 import express from "express";
 import cors from "cors";
 import Fashn from "fashn";
+import crypto from "node:crypto";
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
 const client = new Fashn({ apiKey: process.env.FASHN_API_KEY });
+const results = new Map();
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "").replace(/\\/$/, "");
 
 app.use(cors());
 app.use(express.json({ limit: "30mb" }));
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "ai-virtual-dress-tryon" });
+});
+
+app.get("/v1/results/:id", (req, res) => {
+  const item = results.get(req.params.id);
+  if (!item) return res.status(404).json({ message: "Result expired or not found." });
+  const buffer = Buffer.from(item.base64, "base64");
+  res.set("Content-Type", "image/jpeg");
+  return res.send(buffer);
 });
 
 app.post("/v1/tryon", async (req, res) => {
@@ -60,6 +71,6 @@ app.post("/v1/tryon", async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+setInterval(() => {\n  const cutoff = Date.now() - 30 * 60 * 1000;\n  for (const [id, item] of results) if (item.createdAt < cutoff) results.delete(id);\n}, 5 * 60 * 1000);\n\napp.listen(port, () => {
   console.log("AI Virtual Dress Try-On server listening on :" + port);
 });

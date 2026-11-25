@@ -33,6 +33,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
     CATALOGUE("Catalogue", Icons.Default.Storefront),
     FAVORITES("Favorites", Icons.Default.Favorite),
     COMPARE("Compare", Icons.Default.Compare),
+    OUTFIT("Outfit", Icons.Default.Style),
     STAFF("Staff", Icons.Default.Badge)
 }
 
@@ -63,6 +64,9 @@ private fun TryOnApp() {
     var garmentCategory by remember { mutableStateOf("auto") }
     var garmentColor by remember { mutableStateOf("Unknown") }
     var regenerationMode by remember { mutableStateOf("Regenerate") }
+    var outfitProducts by remember { mutableStateOf<List<CatalogueProduct>>(emptyList()) }
+    var outfitInstruction by remember { mutableStateOf("") }
+    var catalogue by remember { mutableStateOf(StoreCatalogue.products) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     var consentGranted by remember { mutableStateOf(PrivacyManager.hasConsent(context)) }
@@ -88,6 +92,8 @@ private fun TryOnApp() {
     }
 
     LaunchedEffect(Unit) {
+        val cached = CatalogueCache.load(context)
+        if (cached.isNotEmpty()) catalogue = cached else CatalogueCache.save(context, StoreCatalogue.products)
         if (PrivacyManager.shouldExpire(context)) {
             PrivacyManager.clearTemporarySession(context)
             consentGranted = false
@@ -178,35 +184,39 @@ private fun TryOnApp() {
             isGenerating = true
             result = null
             try {
-                status = "Checking person, pose and photo quality..."
+                status = "Preparing person image..."
                 val personCheck = PersonInputAnalyzer.analyze(personImage.bitmap)
                 if (!personCheck.accepted) {
                     status = personCheck.pose.message
                     return@launch
                 }
 
-                status = "Checking garment isolation and classification..."
+                status = "Detecting clothing..."
                 val garmentCheck = GarmentValidator.validate(garmentImage.bitmap)
                 if (!garmentCheck.accepted) {
                     status = garmentCheck.message
                     return@launch
                 }
 
-                status = "Applying garment with identity-preserving AI..."
+                status = "Applying garment..."
                 val response = api.generate(
                     TryOnRequest(
                         modelImage = personImage.dataUri,
                         garmentImage = garmentImage.dataUri,
                         category = garmentCategory,
                         mode = "quality",
-                        instruction = when (regenerationMode) {
+                        instruction = listOfNotNull(outfitInstruction.takeIf { it.isNotBlank() }, when (regenerationMode) {
                             "Better Fit" -> "Prioritize natural garment fit and body alignment."
                             "Preserve Face" -> "Prioritize exact preservation of face, skin, hair and identity."
                             "Improve Details" -> "Prioritize fabric texture, seams, folds, draping and garment detail."
                             else -> "Regenerate the result with improved overall realism."
-                        }
+                        }).joinToString(" ") + " Preserve the original background where appropriate; preserve face, skin, hair and identity; maintain natural folds, draping, shadows, lighting and garment proportions."
                     )
                 )
+                status = "Improving details..."
+                val quality = TryOnResultValidator.validate(response.imageDataUri)
+                if (!quality.accepted) throw IllegalStateException(quality.message)
+                status = "Finalizing preview..."
                 result = response.imageDataUri
                 resultUrl = response.resultUrl
                 status = "AI try-on completed and quality checked."
@@ -319,6 +329,7 @@ private fun TryOnApp() {
                         onSave = { result?.let { runCatching { ResultActions.saveToGallery(context, it); status = "Saved to Gallery." }.onFailure { status = it.message ?: "Save failed." } } },
                         onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
                         onQr = { resultUrl?.let { qrDialog = it } },
+                        resultUrl = resultUrl,
                         regenerationMode = regenerationMode,
                         onRegenerationMode = { regenerationMode = it },
                         onSuggestion = { product ->
@@ -341,7 +352,7 @@ private fun TryOnApp() {
                             status = "Ready when you are"
                         }
                     )
-                    AppTab.CATALOGUE -> CatalogueScreen(onSelect = { product -> CustomerSessionStore.addProduct(SelectedProduct(product, product.colors.firstOrNull() ?: "Default", product.sizes.firstOrNull() ?: "M")) }, onTryOn = { product ->
+                    AppTab.CATALOGUE -> CatalogueScreen(catalogue = catalogue, onSelect = { product -> CustomerSessionStore.addProduct(SelectedProduct(product, product.colors.firstOrNull() ?: "Default", product.sizes.firstOrNull() ?: "M")) }, onTryOn = { product ->
                         tab = AppTab.TRY_ON
                         status = "Loading ${product.name}..."
                         scope.launch {
@@ -359,6 +370,7 @@ private fun TryOnApp() {
                     })
                     AppTab.FAVORITES -> FavoritesScreen(savedLooks, selectedProducts, onDelete = { CustomerSessionStore.removeLook(it) }, onRemoveProduct = { CustomerSessionStore.removeProduct(it) })
                     AppTab.COMPARE -> CompareScreen(savedLooks)
+                    AppTab.OUTFIT -> OutfitComposerScreen(catalogue, outfitProducts, onAdd = { outfitProducts = OutfitComposer.add(outfitProducts, it) }, onRemove = { outfitProducts = OutfitComposer.remove(outfitProducts, it) }, onApply = { selected -> outfitProducts = selected.products; outfitInstruction = selected.instruction(); selected.primary?.let { product -> tab = AppTab.TRY_ON; scope.launch { runCatching { CatalogueRepository.loadProductImage(product) }.fold({ image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Outfit primary: " + product.name; status = "Outfit ready. Add the selected look and generate." }, { status = "Could not load outfit product." }) } } })
                     AppTab.STAFF -> StaffModeScreen(onScan = { bitmap ->
                         scope.launch {
                             status = "Scanning product barcode..."
@@ -417,6 +429,7 @@ private fun TryOnScreen(
     person: SelectedImage?,
     garment: SelectedImage?,
     result: String?,
+    resultUrl: String?,
     status: String,
     isGenerating: Boolean,
     selectedColor: String,
@@ -607,6 +620,31 @@ private fun TryOnScreen(
     }
 }
 
+
+@Composable
+private fun OutfitComposerScreen(catalogue: List<CatalogueProduct>, selected: List<CatalogueProduct>, onAdd: (CatalogueProduct) -> Unit, onRemove: (String) -> Unit, onApply: (OutfitSelection) -> Unit) {
+    Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Full Outfit Composer", style = MaterialTheme.typography.headlineSmall)
+        Text("Combine multiple catalogue items into one store-relevant look.", style = MaterialTheme.typography.bodyMedium)
+        if (selected.isNotEmpty()) {
+            Text("Selected outfit", style = MaterialTheme.typography.titleMedium)
+            selected.forEach { item ->
+                Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) { Text(item.name, style = MaterialTheme.typography.titleMedium); Text(item.category + " · ₹" + item.price) }
+                        TextButton(onClick = { onRemove(item.code) }) { Text("Remove") }
+                    }
+                }
+            }
+            Button(onClick = { onApply(OutfitSelection(selected)) }, modifier = Modifier.fillMaxWidth()) { Text("Use Outfit for Try On") }
+        }
+        catalogue.filter { it.inStock }.forEach { product ->
+            OutlinedButton(onClick = { onAdd(product) }, modifier = Modifier.fillMaxWidth(), enabled = selected.none { it.code == product.code }) {
+                Text("Add " + product.name + " · " + product.category)
+            }
+        }
+    }
+}
 @Composable
 private fun InputCard(
     title: String,
@@ -644,11 +682,11 @@ private fun InputCard(
 }
 
 @Composable
-private fun CatalogueScreen(onSelect: (CatalogueProduct) -> Unit, onTryOn: (CatalogueProduct) -> Unit) {
+private fun CatalogueScreen(catalogue: List<CatalogueProduct>, onSelect: (CatalogueProduct) -> Unit, onTryOn: (CatalogueProduct) -> Unit) {
     var query by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
     val categories = listOf("All", "Shirt", "Jeans", "Jacket", "Kurti")
-    val products = StoreCatalogue.products.filter {
+    val products = catalogue.filter {
         (category == "All" || it.category == category) &&
             (query.isBlank() || it.name.contains(query, ignoreCase = true) || it.code.contains(query, ignoreCase = true))
     }

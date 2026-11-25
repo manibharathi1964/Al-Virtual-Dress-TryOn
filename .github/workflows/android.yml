@@ -2,7 +2,7 @@ name: AI Virtual Dress Try-On Android Build
 
 on:
   push:
-    branches: [ main, phase-9-privacy-hardening ]
+    branches: [ main, phase-9-privacy-hardening, verify-final-testing ]
   pull_request:
     branches: [ main ]
 

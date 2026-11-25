@@ -803,7 +803,6 @@ private fun FavoritesScreen(looks: List<SavedLook>, selectedProducts: List<Selec
 }
 
 @Composable
-@Composable
 private fun CompareScreen(person: SelectedImage?, looks: List<SavedLook>) {
     var selectedCount by remember { mutableStateOf(2) }
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {

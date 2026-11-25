@@ -344,6 +344,9 @@ private fun TryOnApp() {
                             person = null
                             garment = null
                             result = null
+                            resultUrl = null
+                            outfitProducts = emptyList()
+                            outfitInstruction = ""
                             isGenerating = false
                             personValidation = null
                             garmentValidation = null
@@ -715,26 +718,32 @@ private fun CatalogueScreen(catalogue: List<CatalogueProduct>, onSelect: (Select
             }
         }
         products.forEach { product ->
+            var color by remember(product.code) { mutableStateOf(product.colors.firstOrNull() ?: "Default") }
+            var size by remember(product.code) { mutableStateOf(product.sizes.firstOrNull() ?: "M") }
+            val variant = product.variants.firstOrNull { it.color == color } ?: product.variants.firstOrNull()
             Card(shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AsyncImage(
-                        model = product.imageUrl,
-                        contentDescription = product.name,
-                        modifier = Modifier.size(76.dp),
-                        contentScale = ContentScale.Crop
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(product.name, style = MaterialTheme.typography.titleMedium)
-                        Text(product.code + " · " + product.category, style = MaterialTheme.typography.labelSmall)
-                        Text("₹" + product.price, style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (product.inStock) "In stock · " + product.colors.joinToString() else "Out of stock",
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        AsyncImage(model = product.imageUrl, contentDescription = product.name, modifier = Modifier.size(76.dp), contentScale = ContentScale.Crop)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(product.name, style = MaterialTheme.typography.titleMedium)
+                            Text(product.code + " · " + product.category, style = MaterialTheme.typography.labelSmall)
+                            Text("₹" + product.price, style = MaterialTheme.typography.bodyMedium)
+                            Text(if (product.inStock) "In stock" else "Out of stock", style = MaterialTheme.typography.bodySmall)
+                            Text("Pattern: " + (variant?.pattern ?: "—") + " · Material: " + (variant?.material ?: "—"), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                    Text("Color", style = MaterialTheme.typography.labelMedium)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(product.colors) { item -> FilterChip(selected = color == item, onClick = { color = item }, label = { Text(item) }) }
+                    }
+                    Text("Size", style = MaterialTheme.typography.labelMedium)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(variant?.sizes ?: product.sizes) { item -> FilterChip(selected = size == item, onClick = { size = item }, label = { Text(item) }) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedButton(onClick = { onSelect(product) }, enabled = product.inStock) { Text("Select") }
+                        OutlinedButton(onClick = { onSelect(SelectedProduct(product, color, size)) }, enabled = product.inStock) { Text("Select") }
                         OutlinedButton(onClick = { onTryOn(product) }, enabled = product.inStock) { Text("Try On") }
                     }
                 }

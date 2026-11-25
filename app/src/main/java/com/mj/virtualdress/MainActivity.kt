@@ -304,7 +304,7 @@ private fun TryOnApp() {
                             status = "Ready when you are"
                         }
                     )
-                    AppTab.CATALOGUE -> CatalogueScreen(onTryOn = { product ->
+                    AppTab.CATALOGUE -> CatalogueScreen(onSelect = { product -> CustomerSessionStore.addProduct(SelectedProduct(product, product.colors.firstOrNull() ?: "Default", product.sizes.firstOrNull() ?: "M")) }, onTryOn = { product ->
                         tab = AppTab.TRY_ON
                         status = "Loading ${product.name}..."
                         scope.launch {
@@ -320,7 +320,7 @@ private fun TryOnApp() {
                             )
                         }
                     })
-                    AppTab.FAVORITES -> FavoritesScreen(savedLooks, onDelete = { CustomerSessionStore.removeLook(it) })
+                    AppTab.FAVORITES -> FavoritesScreen(savedLooks, selectedProducts, onDelete = { CustomerSessionStore.removeLook(it) }, onRemoveProduct = { CustomerSessionStore.removeProduct(it) })
                     AppTab.COMPARE -> CompareScreen(savedLooks)
                     AppTab.STAFF -> StaffModeScreen(onScan = { bitmap ->
                         scope.launch {
@@ -601,7 +601,7 @@ private fun InputCard(
 }
 
 @Composable
-private fun CatalogueScreen(onTryOn: (CatalogueProduct) -> Unit) {
+private fun CatalogueScreen(onSelect: (CatalogueProduct) -> Unit, onTryOn: (CatalogueProduct) -> Unit) {
     var query by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("All") }
     val categories = listOf("All", "Shirt", "Jeans", "Jacket", "Kurti")
@@ -663,9 +663,27 @@ private fun CatalogueScreen(onTryOn: (CatalogueProduct) -> Unit) {
 }
 
 @Composable
-private fun FavoritesScreen(looks: List<SavedLook>, onDelete: (Long) -> Unit) {
+private fun FavoritesScreen(looks: List<SavedLook>, selectedProducts: List<SelectedProduct>, onDelete: (Long) -> Unit, onRemoveProduct: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text("My Favorites", style = MaterialTheme.typography.headlineSmall)
+        if (selectedProducts.isNotEmpty()) {
+            Text("Selected Products", style = MaterialTheme.typography.titleMedium)
+            selectedProducts.forEach { item ->
+                Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(item.product.name, style = MaterialTheme.typography.titleMedium)
+                            Text(item.product.code + " · " + item.color + " · " + item.size)
+                            Text("₹" + item.product.price)
+                        }
+                        IconButton(onClick = { onRemoveProduct(item.product.code) }) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = "Remove product")
+                        }
+                    }
+                }
+            }
+        }
+
         if (looks.isEmpty()) {
             EmptyState(Icons.Default.FavoriteBorder, "No favorites yet", "Save your best looks here.")
         } else {

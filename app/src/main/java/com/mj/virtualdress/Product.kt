@@ -3,7 +3,9 @@ package com.mj.virtualdress
 data class ProductVariant(
     val color: String,
     val sizes: List<String>,
-    val stockBySize: Map<String, Int>
+    val stockBySize: Map<String, Int>,
+    val pattern: String = "Solid",
+    val material: String = "Standard"
 ) {
     val inStock: Boolean
         get() = stockBySize.values.any { it > 0 }

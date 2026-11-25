@@ -243,7 +243,22 @@ private fun TryOnApp() {
                             status = "Ready when you are"
                         }
                     )
-                    AppTab.CATALOGUE -> CatalogueScreen(onTryOn = { product ->\n                        tab = AppTab.TRY_ON\n                        status = "Loading ${product.name}..."\n                        scope.launch {\n                            runCatching { CatalogueRepository.loadProductImage(product) }.fold(\n                                { image ->\n                                    garment = image\n                                    garmentCategory = product.category\n                                    garmentColor = product.colors.firstOrNull() ?: "Unknown"\n                                    garmentValidation = "✓ ${product.name} · ${product.category}"\n                                    status = "Catalogue product ready for try-on."\n                                },\n                                { status = "Could not load catalogue product: ${it.message}" }\n                            )\n                        }\n                    })
+                    AppTab.CATALOGUE -> CatalogueScreen(onTryOn = { product ->
+                        tab = AppTab.TRY_ON
+                        status = "Loading ${product.name}..."
+                        scope.launch {
+                            runCatching { CatalogueRepository.loadProductImage(product) }.fold(
+                                { image ->
+                                    garment = image
+                                    garmentCategory = product.category
+                                    garmentColor = product.colors.firstOrNull() ?: "Unknown"
+                                    garmentValidation = "✓ ${product.name} · ${product.category}"
+                                    status = "Catalogue product ready for try-on."
+                                },
+                                { status = "Could not load catalogue product: ${it.message}" }
+                            )
+                        }
+                    })
                     AppTab.FAVORITES -> FavoritesScreen(favorite)
                     AppTab.COMPARE -> CompareScreen()
                 }

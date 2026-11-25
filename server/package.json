@@ -1,0 +1,13 @@
+{
+  "name": "ai-virtual-dress-tryon-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "fashn": "^1.1.0"
+  }
+}

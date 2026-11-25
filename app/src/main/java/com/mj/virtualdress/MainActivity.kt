@@ -71,6 +71,22 @@ private fun TryOnApp() {
     val scope = rememberCoroutineScope()
     val api = remember { TryOnApi() }
 
+    LaunchedEffect(favorite, result) {
+        if (favorite && !result.isNullOrBlank()) {
+            CustomerSessionStore.saveLook(
+                SavedLook(
+                    id = result.hashCode().toLong(),
+                    resultDataUri = result!!,
+                    productCode = null,
+                    productName = null,
+                    price = null,
+                    color = garmentColor,
+                    size = selectedSize
+                )
+            )
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (PrivacyManager.shouldExpire(context)) {
             PrivacyManager.clearTemporarySession(context)

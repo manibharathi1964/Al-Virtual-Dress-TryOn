@@ -30,9 +30,7 @@ app.post("/v1/tryon", async (req, res) => {
       inputs: {
         model_image,
         product_image: garment_image,
-        prompt: category === "auto"
-          ? undefined
-          : "Apply this " + category + " garment naturally while preserving the person's identity, pose and background.",
+        prompt: "Apply the garment naturally as a realistic virtual try-on. Preserve the person's face, skin, hair, identity and pose. Keep body proportions correct, preserve the original background where appropriate, and produce natural garment fit, folds, draping, shadows and lighting. Garment category: " + category + ".",
         generation_mode: mode === "quality" ? "quality" : mode === "performance" ? "fast" : "balanced",
         resolution: "1k",
         num_images: 1,

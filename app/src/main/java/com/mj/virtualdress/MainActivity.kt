@@ -195,8 +195,20 @@ private fun TryOnScreen(
         Text("Capture yourself, choose a garment, then preview the outfit.", style = MaterialTheme.typography.bodyMedium)
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            InputCard("Person", personModel, Icons.Default.Person, onPickPerson)
-            InputCard("Garment", dressModel, Icons.Default.Checkroom, onPickDress)
+            InputCard(
+                title = "Person",
+                model = personModel,
+                icon = Icons.Default.Person,
+                onClick = onPickPerson,
+                modifier = Modifier.weight(1f)
+            )
+            InputCard(
+                title = "Garment",
+                model = dressModel,
+                icon = Icons.Default.Checkroom,
+                onClick = onPickDress,
+                modifier = Modifier.weight(1f)
+            )
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -283,9 +295,15 @@ private fun TryOnScreen(
 }
 
 @Composable
-private fun InputCard(title: String, model: Any?, icon: ImageVector, onClick: () -> Unit) {
+private fun InputCard(
+    title: String,
+    model: Any?,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = Modifier.weight(1f).height(170.dp),
+        modifier = modifier.height(170.dp),
         shape = RoundedCornerShape(20.dp),
         onClick = onClick
     ) {
@@ -352,7 +370,9 @@ private fun FavoritesScreen(hasFavorite: Boolean) {
                         Text("Saved Try-On Look", style = MaterialTheme.typography.titleMedium)
                         Text("Ready for comparison or sharing.")
                     }
-                    IconButton(onClick = { }) { Icon(Icons.Default.DeleteOutline, null, "Delete") }
+                    IconButton(onClick = { }) {
+                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete")
+                    }
                 }
             }
         } else {
@@ -367,8 +387,8 @@ private fun CompareScreen() {
         Text("Compare Looks", style = MaterialTheme.typography.headlineSmall)
         Text("Compare two or more saved try-on results side by side.", style = MaterialTheme.typography.bodyMedium)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            CompareSlot("Look 1")
-            CompareSlot("Look 2")
+            CompareSlot("Look 1", Modifier.weight(1f))
+            CompareSlot("Look 2", Modifier.weight(1f))
         }
         Button(onClick = { }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Compare, null)
@@ -379,8 +399,8 @@ private fun CompareScreen() {
 }
 
 @Composable
-private fun CompareSlot(label: String) {
-    Card(Modifier.weight(1f).height(190.dp), shape = RoundedCornerShape(18.dp)) {
+private fun CompareSlot(label: String, modifier: Modifier = Modifier) {
+    Card(modifier.height(190.dp), shape = RoundedCornerShape(18.dp)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.AddPhotoAlternate, null, Modifier.size(38.dp))

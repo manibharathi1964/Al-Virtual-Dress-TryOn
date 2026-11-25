@@ -63,18 +63,47 @@ private fun TryOnApp() {
     val scope = rememberCoroutineScope()
     val api = remember { TryOnApi() }
 
+    fun analyzePerson(image: SelectedImage?) {
+        if (image == null) return
+        scope.launch {
+            personValidation = "Checking person, pose and photo quality..."
+            personValidation = runCatching { PersonInputAnalyzer.analyze(image.bitmap) }.fold(
+                { if (it.accepted) "✓ Person, pose and background detected." else "⚠ " + it.pose.message },
+                { "⚠ Photo analysis failed: " + (it.message ?: "Unknown error") }
+            )
+        }
+    }
+
+    fun analyzeGarment(image: SelectedImage?) {
+        if (image == null) return
+        scope.launch {
+            garmentValidation = "Analyzing garment..."
+            runCatching { GarmentAnalyzer.analyze(image.bitmap) }.fold(
+                { analysis ->
+                    garment = bitmapToSelectedImage(analysis.isolatedBitmap)
+                    garmentCategory = analysis.category
+                    garmentColor = analysis.color
+                    garmentValidation = "✓ " + analysis.category + " · " + analysis.color
+                },
+                { garmentValidation = "⚠ Garment analysis failed: " + (it.message ?: "Unknown error") }
+            )
+        }
+    }
+
     val pickPerson = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         person = uri?.let { context.readImageAsDataUri(it) }
+        result = null
         if (person != null) {
-            result = null
             status = "Person photo selected"
+            analyzePerson(person)
         }
     }
     val pickDress = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         garment = uri?.let { context.readImageAsDataUri(it) }
+        result = null
         if (garment != null) {
-            result = null
             status = "Garment selected"
+            analyzeGarment(garment)
         }
     }
     val takePerson = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap: Bitmap? ->
@@ -82,6 +111,7 @@ private fun TryOnApp() {
             person = bitmapToSelectedImage(bitmap)
             result = null
             status = "Person photo captured"
+            analyzePerson(person)
         }
     }
     val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -107,18 +137,31 @@ private fun TryOnApp() {
         scope.launch {
             isGenerating = true
             result = null
-            status = "Preparing person image..."
             try {
-                status = "Sending person + garment to AI..."
+                status = "Checking person, pose and photo quality..."
+                val personCheck = PersonInputAnalyzer.analyze(personImage.bitmap)
+                if (!personCheck.accepted) {
+                    status = personCheck.pose.message
+                    return@launch
+                }
+
+                status = "Checking garment isolation and classification..."
+                val garmentCheck = GarmentValidator.validate(garmentImage.bitmap)
+                if (!garmentCheck.accepted) {
+                    status = garmentCheck.message
+                    return@launch
+                }
+
+                status = "Applying garment with identity-preserving AI..."
                 result = api.generate(
                     TryOnRequest(
                         modelImage = personImage.dataUri,
                         garmentImage = garmentImage.dataUri,
-                        category = "auto",
-                        mode = "balanced"
+                        category = garmentCategory,
+                        mode = "quality"
                     )
                 )
-                status = "AI try-on completed."
+                status = "AI try-on completed and quality checked."
             } catch (error: Exception) {
                 status = error.message ?: "AI try-on failed. Please retry."
             } finally {
@@ -178,6 +221,10 @@ private fun TryOnApp() {
                         isGenerating = isGenerating,
                         selectedColor = selectedColor,
                         selectedSize = selectedSize,
+                        personValidation = personValidation,
+                        garmentValidation = garmentValidation,
+                        garmentCategory = garmentCategory,
+                        garmentColor = garmentColor,
                         onPickPerson = { pickPerson.launch("image/*") },
                         onPickDress = { pickDress.launch("image/*") },
                         onCamera = { capturePerson() },
@@ -189,6 +236,10 @@ private fun TryOnApp() {
                             garment = null
                             result = null
                             isGenerating = false
+                            personValidation = null
+                            garmentValidation = null
+                            garmentCategory = "auto"
+                            garmentColor = "Unknown"
                             status = "Ready when you are"
                         }
                     )
@@ -210,6 +261,10 @@ private fun TryOnScreen(
     isGenerating: Boolean,
     selectedColor: String,
     selectedSize: String,
+    personValidation: String?,
+    garmentValidation: String?,
+    garmentCategory: String,
+    garmentColor: String,
     onPickPerson: () -> Unit,
     onPickDress: () -> Unit,
     onCamera: () -> Unit,
@@ -223,7 +278,12 @@ private fun TryOnScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Text("Create your look", style = MaterialTheme.typography.headlineSmall)
-        Text("Capture yourself, choose a garment, then generate a real AI try-on.", style = MaterialTheme.typography.bodyMedium)\n        personValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }\n        garmentValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }\n        if (garmentCategory != "auto") Text("Detected: $garmentCategory · $garmentColor", style = MaterialTheme.typography.labelMedium)
+        Text("Capture yourself, choose a garment, then generate a real AI try-on.", style = MaterialTheme.typography.bodyMedium)
+        personValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        garmentValidation?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+        if (garmentCategory != "auto") {
+            Text("Detected: $garmentCategory · $garmentColor", style = MaterialTheme.typography.labelMedium)
+        }
 
         if (result != null) {
             Card(shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {

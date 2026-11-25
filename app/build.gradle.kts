@@ -50,5 +50,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta2")
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta4")
+    implementation("com.google.mlkit:image-labeling:17.0.9")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

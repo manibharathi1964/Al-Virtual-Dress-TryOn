@@ -62,10 +62,22 @@ private fun TryOnApp() {
     var garmentCategory by remember { mutableStateOf("auto") }
     var garmentColor by remember { mutableStateOf("Unknown") }
     var regenerationMode by remember { mutableStateOf("Regenerate") }
+    var consentGranted by remember { mutableStateOf(PrivacyManager.hasConsent(context)) }
+    var showPrivacy by remember { mutableStateOf(!consentGranted) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val api = remember { TryOnApi() }
+
+    LaunchedEffect(Unit) {
+        if (PrivacyManager.shouldExpire(context)) {
+            PrivacyManager.clearTemporarySession(context)
+            consentGranted = false
+            showPrivacy = true
+            status = "Previous customer session expired for privacy."
+        }
+        PrivacyManager.touch(context)
+    }
 
     fun analyzePerson(image: SelectedImage?) {
         if (image == null) return
@@ -131,6 +143,12 @@ private fun TryOnApp() {
     }
 
     fun generateTryOn() {
+        if (!consentGranted) {
+            showPrivacy = true
+            status = "Privacy consent is required before processing photos."
+            return
+        }
+        PrivacyManager.touch(context)
         val personImage = person
         val garmentImage = garment
         if (personImage == null || garmentImage == null) {
@@ -163,7 +181,12 @@ private fun TryOnApp() {
                         garmentImage = garmentImage.dataUri,
                         category = garmentCategory,
                         mode = "quality",
-                        instruction = when (regenerationMode) {\n                            "Better Fit" -> "Prioritize natural garment fit and body alignment."\n                            "Preserve Face" -> "Prioritize exact preservation of face, skin, hair and identity."\n                            "Improve Details" -> "Prioritize fabric texture, seams, folds, draping and garment detail."\n                            else -> "Regenerate the result with improved overall realism."\n                        }
+                        instruction = when (regenerationMode) {
+                            "Better Fit" -> "Prioritize natural garment fit and body alignment."
+                            "Preserve Face" -> "Prioritize exact preservation of face, skin, hair and identity."
+                            "Improve Details" -> "Prioritize fabric texture, seams, folds, draping and garment detail."
+                            else -> "Regenerate the result with improved overall realism."
+                        }
                     )
                 )
                 status = "AI try-on completed and quality checked."
@@ -173,6 +196,27 @@ private fun TryOnApp() {
                 isGenerating = false
             }
         }
+    }
+
+    if (showPrivacy) {
+        AlertDialog(
+            onDismissRequest = { if (consentGranted) showPrivacy = false },
+            title = { Text("Privacy & Photo Processing") },
+            text = { Text(PrivacyManager.privacySummary()) },
+            confirmButton = {
+                TextButton(onClick = {
+                    PrivacyManager.grantConsent(context)
+                    consentGranted = true
+                    showPrivacy = false
+                    status = "Privacy consent granted."
+                }) { Text("I Agree & Continue") }
+            },
+            dismissButton = {
+                if (consentGranted) {
+                    TextButton(onClick = { showPrivacy = false }) { Text("Close") }
+                }
+            }
+        )
     }
 
     MaterialTheme(
@@ -240,7 +284,14 @@ private fun TryOnApp() {
                         onShare = { result?.let { runCatching { ResultActions.share(context, it) }.onFailure { status = it.message ?: "Share failed." } } },
                         regenerationMode = regenerationMode,
                         onRegenerationMode = { regenerationMode = it },
-                        onSuggestion = { product ->\n                            scope.launch {\n                                runCatching { CatalogueRepository.loadProductImage(product) }.fold(\n                                    { image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Style Assistant: ${product.name}"; status = "Recommended product loaded. Ready for Try On." },\n                                    { status = "Could not load recommendation." }\n                                )\n                            }\n                        },
+                        onSuggestion = { product ->
+                            scope.launch {
+                                runCatching { CatalogueRepository.loadProductImage(product) }.fold(
+                                    { image -> garment = image; garmentCategory = product.category; garmentColor = product.colors.firstOrNull() ?: "Unknown"; garmentValidation = "✓ Style Assistant: ${product.name}"; status = "Recommended product loaded. Ready for Try On." },
+                                    { status = "Could not load recommendation." }
+                                )
+                            }
+                        },
                         onReset = {
                             person = null
                             garment = null
